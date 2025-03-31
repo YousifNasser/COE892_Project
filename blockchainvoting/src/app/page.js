@@ -1,15 +1,76 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 
 export default function Voting() {
+  const [contractAddress, setContractAddress] = useState('');
   const [candidate, setCandidate] = useState('');
   const [votes, setVotes] = useState(null);
   const [votedCandidate, setVotedCandidate] = useState('');
+  const [voteData, setVoteData] = useState([]);
 
-  const contractAddress = '0x3Bd152733B7e5B9EF1C32C80D06fecD537EEeB23';
 
   const abi = [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "candidates",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "hasVoted",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "name": "votes",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
     {
       "inputs": [
         {
@@ -40,28 +101,37 @@ export default function Voting() {
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "",
-          "type": "string"
-        }
-      ],
-      "name": "votes",
+      "inputs": [],
+      "name": "getAllCandidates",
       "outputs": [
         {
-          "internalType": "uint256",
+          "internalType": "string[]",
           "name": "",
-          "type": "uint256"
+          "type": "string[]"
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     }
   ];
+
+  useEffect(() => {
+    async function fetchContractAddress() {
+      try {
+        const response = await fetch('/contractAddress.json'); // Fetch locally stored contract address
+        const data = await response.json();
+        setContractAddress(data.address);
+      } catch (error) {
+        console.error('Error fetching contract address:', error);
+      }
+    }
+    fetchContractAddress();
+  }, []);
 
   async function requestAccount() {
     if (!window.ethereum) {
