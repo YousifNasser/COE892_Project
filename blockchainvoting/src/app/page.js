@@ -7,7 +7,7 @@ export default function Voting() {
   const [votes, setVotes] = useState(null);
   const [votedCandidate, setVotedCandidate] = useState('');
 
-  const contractAddress = '0xf84F7095DC64B8fc104cc42f63A67Ae1b9248bA3';
+  const contractAddress = '0x3Bd152733B7e5B9EF1C32C80D06fecD537EEeB23';
 
   const abi = [
     {
