@@ -1,16 +1,19 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import styles from './page.module.css';
 
 export default function Voting() {
   const [contractAddress, setContractAddress] = useState('');
   const [candidate, setCandidate] = useState('');
   const [votes, setVotes] = useState(null);
   const [votedCandidate, setVotedCandidate] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const [voteData, setVoteData] = useState([]);
 
 
-  const abi = [
+const abi = [
     {
       "inputs": [
         {
@@ -135,73 +138,139 @@ export default function Voting() {
 
   async function requestAccount() {
     if (!window.ethereum) {
-      alert('MetaMask is required to use this app!');
-      return;
+      setError('MetaMask is required to use this app!');
+      return false;
     }
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    try {
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      return true;
+    } catch (err) {
+      setError('Failed to connect to MetaMask');
+      return false;
+    }
   }
 
-
   async function handleVote() {
+    setError('');
+    setIsLoading(true);
     try {
-      await requestAccount();
+      if (!candidate) {
+        throw new Error('Please enter a candidate name');
+      }
+
+      const isConnected = await requestAccount();
+      if (!isConnected) return;
+
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(contractAddress, abi, signer);
-  
+
       const tx = await contract.vote(candidate);
       await tx.wait();
       const count = await contract.getVotes(candidate);
       setVotes(count.toString());
-      setVotedCandidate(candidate)
-      alert(`Voted for ${candidate}!`);
+      setVotedCandidate(candidate);
     } catch (err) {
       if (err.message.includes("already voted") || err.message.includes("revert")) {
-        alert("You have already voted! Each wallet is allowed only one vote.");
+        setError("You have already voted! Each wallet is allowed only one vote.");
       } else {
-        alert("An error occurred. Please try again.");
+        setError(err.message || "An error occurred. Please try again.");
       }
+    } finally {
+      setIsLoading(false);
     }
-  } 
+  }
 
   async function handleCheckVotes() {
-    if (typeof window === 'undefined' || !window.ethereum) {
-      alert('MetaMask is required to use this app!');
-      return;
-    }
+    setError('');
+    setIsLoading(true);
     try {
+      if (!candidate) {
+        throw new Error('Please enter a candidate name');
+      }
+
+      if (typeof window === 'undefined' || !window.ethereum) {
+        throw new Error('MetaMask is required to use this app!');
+      }
+
       const provider = new ethers.BrowserProvider(window.ethereum);
       const contract = new ethers.Contract(contractAddress, abi, provider);
 
       const count = await contract.getVotes(candidate);
       setVotes(count.toString());
-      setVotedCandidate(candidate)
+      setVotedCandidate(candidate);
     } catch (err) {
-      console.error('Error reading votes:', err);
+      setError(err.message || 'Error reading votes');
+    } finally {
+      setIsLoading(false);
     }
   }
 
   return (
-    <div style={{ padding: '40px' }}>
-      <h1>🗳️ Blockchain Voting</h1>
-      <input
-        placeholder="Candidate name"
-        value={candidate}
-        onChange={(e) => setCandidate(e.target.value)}
-        style={{ padding: '10px', marginRight: '10px' }}
-      />
-      <button onClick={handleVote} style={{ padding: '10px', marginRight: '10px' }}>
-        Vote
-      </button>
-      <button onClick={handleCheckVotes} style={{ padding: '10px' }}>
-        Check Votes
-      </button>
+    <div className={styles.page}>
+      <main className={styles.main}>
+        <div className={styles.header}>
+          <h1>🗳️ Blockchain Voting System</h1>
+          <p className={styles.subtitle}>Secure, transparent, and tamper-proof voting powered by blockchain</p>
+        </div>
 
-      {votes !== null && (
-        <h2>
-          {votedCandidate} has {votes} votes!
-        </h2>
-      )}
+        <div className={styles.card}>
+          <div className={styles.inputGroup}>
+            <label htmlFor="candidate">Candidate Name</label>
+            <input
+              id="candidate"
+              placeholder="Enter candidate name"
+              value={candidate}
+              onChange={(e) => setCandidate(e.target.value)}
+              className={styles.input}
+            />
+          </div>
+
+          <div className={styles.buttonGroup}>
+            <button
+              onClick={handleVote}
+              className={`${styles.button} ${styles.primary}`}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Processing...' : 'Cast Vote'}
+            </button>
+            <button
+              onClick={handleCheckVotes}
+              className={`${styles.button} ${styles.secondary}`}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Loading...' : 'Check Votes'}
+            </button>
+          </div>
+
+          {error && <div className={styles.error}>{error}</div>}
+
+          {votes !== null && (
+            <div className={styles.results}>
+              <h3>Voting Results</h3>
+              <div className={styles.resultCard}>
+                <span className={styles.candidateName}>{votedCandidate}</span>
+                <span className={styles.voteCount}>{votes} votes</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className={styles.infoSection}>
+          <h3>How It Works</h3>
+          <ol>
+            <li>Enter a candidate name in the input field</li>
+            <li>Connect your MetaMask wallet when prompted</li>
+            <li>Cast your vote or check current vote counts</li>
+            <li>View transparent, tamper-proof results on the blockchain</li>
+          </ol>
+        </div>
+      </main>
+
+      <footer className={styles.footer}>
+        <p>COE892 - Distributed Cloud Computing Project</p>
+        <p>Toronto Metropolitan University - Winter 2025</p>
+      </footer>
     </div>
   );
 }
