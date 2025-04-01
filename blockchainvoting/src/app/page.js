@@ -1,19 +1,25 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import { BarChart } from '@mui/x-charts/BarChart';
 import styles from './page.module.css';
+
 
 export default function Voting() {
   const [contractAddress, setContractAddress] = useState('');
   const [candidate, setCandidate] = useState('');
   const [votes, setVotes] = useState(null);
+  const [candidateNames, setCandidateNames] = useState([]);
+  const [voteCounts, setVoteCounts] = useState([]);
   const [votedCandidate, setVotedCandidate] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [voteData, setVoteData] = useState([]);
+  const [sanitizeVotingData, setSanitizeVotingData] = useState({})
 
+  console.log("Sanitize Voting Data", sanitizeVotingData);
+  console.log("Votenum is:", voteCounts);
 
-const abi = [
+  const abi = [
     {
       "inputs": [
         {
@@ -115,6 +121,11 @@ const abi = [
           "internalType": "string[]",
           "name": "",
           "type": "string[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "",
+          "type": "uint256[]"
         }
       ],
       "stateMutability": "view",
@@ -126,7 +137,7 @@ const abi = [
   useEffect(() => {
     async function fetchContractAddress() {
       try {
-        const response = await fetch('/contractAddress.json'); // Fetch locally stored contract address
+        const response = await fetch('/contractAddress.json');
         const data = await response.json();
         setContractAddress(data.address);
       } catch (error) {
@@ -135,6 +146,51 @@ const abi = [
     }
     fetchContractAddress();
   }, []);
+
+  useEffect(() => {
+    async function getCandidates() {
+      if (!contractAddress) return;
+
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const contract = new ethers.Contract(contractAddress, abi, provider);
+
+        const [candidateNames2, voteCounts2] = await contract.getAllCandidates();
+
+
+        if (!candidateNames2 || candidateNames2.length === 0) {
+          throw new Error("No candidates found.");
+        }
+
+        setCandidateNames([...candidateNames2]);
+        setVoteCounts(voteCounts2.map(num => num.toString()));
+
+      } catch (err) {
+        setError(err.message || 'Error reading votes');
+      }
+    }
+
+    getCandidates();
+  }, [contractAddress]);
+
+  useEffect(() => {
+    async function sanitizeData() {
+      let results = {};
+      candidateNames.forEach((name, index) => {
+        let voteNum = voteCounts[index];
+        results[name] = voteNum;
+      });
+
+      setSanitizeVotingData((prevData) => {
+        if (JSON.stringify(prevData) === JSON.stringify(results)) return prevData;
+        return results;
+      });
+    }
+
+    if (candidateNames.length > 0 && voteCounts.length > 0) {
+      sanitizeData();
+    }
+  }, [voteCounts, candidateNames]);
 
   async function requestAccount() {
     if (!window.ethereum) {
@@ -168,6 +224,17 @@ const abi = [
       const tx = await contract.vote(candidate);
       await tx.wait();
       const count = await contract.getVotes(candidate);
+
+      const [candidateNames2, voteCounts2] = await contract.getAllCandidates();
+
+
+      if (!candidateNames2 || candidateNames2.length === 0) {
+        throw new Error("No candidates found.");
+      }
+
+      setCandidateNames([...candidateNames2]);
+      setVoteCounts(voteCounts2.map(num => num.toString()));
+
       setVotes(count.toString());
       setVotedCandidate(candidate);
     } catch (err) {
@@ -209,64 +276,94 @@ const abi = [
   return (
     <div className={styles.page}>
       <main className={styles.main}>
-        <div className={styles.header}>
-          <h1>🗳️ Blockchain Voting System</h1>
-          <p className={styles.subtitle}>Secure, transparent, and tamper-proof voting powered by blockchain</p>
-        </div>
+        <div className={styles.voterAndChartContainer}>
+          <div className={styles.voterContainer}>
+            <div className={styles.header}>
+              <h1>🗳️ Blockchain Voting System</h1>
+              <p className={styles.subtitle}>Secure, transparent, and tamper-proof voting powered by blockchain</p>
+            </div>
+            <div className={styles.card}>
+              <div className={styles.inputGroup}>
+                <label htmlFor="candidate">Candidate Name</label>
+                <input
+                  id="candidate"
+                  placeholder="Enter candidate name"
+                  value={candidate}
+                  onChange={(e) => setCandidate(e.target.value)}
+                  className={styles.input}
+                />
+              </div>
 
-        <div className={styles.card}>
-          <div className={styles.inputGroup}>
-            <label htmlFor="candidate">Candidate Name</label>
-            <input
-              id="candidate"
-              placeholder="Enter candidate name"
-              value={candidate}
-              onChange={(e) => setCandidate(e.target.value)}
-              className={styles.input}
+              <div className={styles.buttonGroup}>
+                <button
+                  onClick={handleVote}
+                  className={`${styles.button} ${styles.primary}`}
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Processing...' : 'Cast Vote'}
+                </button>
+                <button
+                  onClick={handleCheckVotes}
+                  className={`${styles.button} ${styles.secondary}`}
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Loading...' : 'Check Votes'}
+                </button>
+              </div>
+
+              {error && <div className={styles.error}>{error}</div>}
+
+              {votes !== null && (
+                <div className={styles.results}>
+                  <h3>Voting Results</h3>
+                  <div className={styles.resultCard}>
+                    <span className={styles.candidateName}>{votedCandidate}</span>
+                    <span className={styles.voteCount}>{votes} votes</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className={styles.infoSection}>
+              <h3>How It Works</h3>
+              <ol>
+                <li>Enter a candidate name in the input field</li>
+                <li>Connect your MetaMask wallet when prompted</li>
+                <li>Cast your vote or check current vote counts</li>
+                <li>View transparent, tamper-proof results on the blockchain</li>
+              </ol>
+            </div>
+          </div>
+          <div className={styles.barChartContainer}>
+            <BarChart
+              xAxis={[
+                {
+                  scaleType: 'band',
+                  data: candidateNames,
+                  sx: {
+                    '.MuiChartsAxis-tickLabel': { fill: 'white' }, // X-axis labels
+                    '.MuiChartsAxis-line': { stroke: 'white' } // X-axis line color
+                  }
+                }
+              ]}
+              yAxis={[
+                {
+                  min: 0,
+                  max: Math.max(...voteCounts) + 1,
+                  tickInterval: 1,
+                  sx: {
+                    '.MuiChartsAxis-tickLabel': { fill: 'white' }, // Y-axis labels
+                    '.MuiChartsAxis-line': { stroke: 'white' } // Y-axis line color
+                  }
+                }
+              ]}
+              series={[{ data: voteCounts }]}
+              width={800}
+              height={600}
             />
           </div>
-
-          <div className={styles.buttonGroup}>
-            <button
-              onClick={handleVote}
-              className={`${styles.button} ${styles.primary}`}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Processing...' : 'Cast Vote'}
-            </button>
-            <button
-              onClick={handleCheckVotes}
-              className={`${styles.button} ${styles.secondary}`}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Loading...' : 'Check Votes'}
-            </button>
-          </div>
-
-          {error && <div className={styles.error}>{error}</div>}
-
-          {votes !== null && (
-            <div className={styles.results}>
-              <h3>Voting Results</h3>
-              <div className={styles.resultCard}>
-                <span className={styles.candidateName}>{votedCandidate}</span>
-                <span className={styles.voteCount}>{votes} votes</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className={styles.infoSection}>
-          <h3>How It Works</h3>
-          <ol>
-            <li>Enter a candidate name in the input field</li>
-            <li>Connect your MetaMask wallet when prompted</li>
-            <li>Cast your vote or check current vote counts</li>
-            <li>View transparent, tamper-proof results on the blockchain</li>
-          </ol>
         </div>
       </main>
-
       <footer className={styles.footer}>
         <p>COE892 - Distributed Cloud Computing Project</p>
         <p>Toronto Metropolitan University - Winter 2025</p>
