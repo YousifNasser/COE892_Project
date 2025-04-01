@@ -16,9 +16,6 @@ export default function Voting() {
   const [error, setError] = useState('');
   const [sanitizeVotingData, setSanitizeVotingData] = useState({})
 
-  console.log("Sanitize Voting Data", sanitizeVotingData);
-  console.log("Votenum is:", voteCounts);
-
   const abi = [
     {
       "inputs": [

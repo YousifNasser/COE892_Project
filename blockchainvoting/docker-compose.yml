@@ -1,0 +1,26 @@
+version: '3'
+services:
+  frontend:
+    build:
+      context: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+    depends_on:
+      - backend
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+
+  backend:
+    image: trufflesuite/ganache-cli
+    container_name: ganache
+    ports:
+      - "8545:8545"
+    networks:
+      - voting_network
+    command: -p 8545 -h 127.0.0.1 -e 1000 -i 5777 -d
+
+networks:
+  voting_network:
+    driver: bridge
