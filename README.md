@@ -40,6 +40,12 @@ truffle migrate --network development
 npm run dev
 ```
 - Connect to MetaMask
+  - Click the network icon in the top left and add a custom network with the following inputs:
+      - Network name: `Localhost 7545`
+      - Default RPC URL: `http://127.0.0.1:7545`
+      - Chain ID: `1337`
+      - Currency Symbol: `ETH`
+  - Connect to the newly created network.
   - Import a test account from Ganache into MetaMask.
   - Switch to the local blockchain network.
 - You can redeploy the contract anytime to reset the candidate and votecounts and allow wallets that voted before to vote again
