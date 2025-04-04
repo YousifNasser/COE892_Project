@@ -1,14 +1,14 @@
 .page {
   --primary-color: #4f46e5;
   --primary-hover: #4338ca;
-  --secondary-color: #f3f4f6;
+  --secondary-color: #1f2937;
   --secondary-hover: #e5e7eb;
-  --text-color: #111827;
-  --background-color: #ffffff;
-  --card-bg: #ffffff;
+  --text-color: #f9fafb;
+  --background-color: #111827;
+  --card-bg: #1f2937;
   --error-color: #dc2626;
   --success-color: #16a34a;
-  --border-color: #e5e7eb;
+  --border-color: #374151;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   --radius: 0.5rem;
   --padding: 1.5rem;
